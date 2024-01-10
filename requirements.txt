@@ -1,0 +1,16 @@
+Flask==3.0.0
+langchain==0.0.351
+huggingface-hub==0.19.4
+langchain-experimental==0.0.47
+langchain-community==0.0.4
+pymilvus==2.3.3
+pypdf==3.17.1
+requests==2.31.0
+pdfminer.six==20221105
+openai==0.27.8
+sentence-transformers==2.2.2
+torch==2.1.1
+torchvision==0.16.1
+cryptography==38.0.4
+transformers==4.35.2
+pymysql==1.1.0

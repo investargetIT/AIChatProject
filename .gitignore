@@ -2,3 +2,4 @@
 *.tar.gz
 nohup.out
 __pycache__
+config.py

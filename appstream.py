@@ -23,7 +23,7 @@ from werkzeug.utils import secure_filename
 from config import ZILLIZ_ENDPOINT, ZILLIZ_TOKEN, OPENAI_API_KEY, ZILLIZ_COLLECTION_NAME, OPENAI_CHAT_MODEL, \
     Embedding_model_name, Embedding_model_kwargs, OPENAI_API_BASE, chat_template
 
-# os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
+os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
 app = Flask(__name__)
 def logexcption(msg=None):
@@ -140,7 +140,7 @@ def chat_bot(input_text, chat_history):
 def async_run(qa, input_text):
     qa.run(input=input_text)
 
-@app.route('/zillizchat/', methods=['POST'])
+@app.route('/streamchat/', methods=['POST'])
 def chat():
     try:
         # input_text = '狗粮、便宜、健康'

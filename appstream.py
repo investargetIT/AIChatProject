@@ -9,7 +9,7 @@ from typing import Any
 import requests
 from flask import Flask, Response
 from flask import request
-from langchain.chains import ConversationalRetrievalChain
+from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import PDFMinerLoader
 from langchain.embeddings import  HuggingFaceBgeEmbeddings
@@ -17,12 +17,13 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Milvus
 from langchain_core.callbacks import StreamingStdOutCallbackHandler, CallbackManager
 from langchain_core.outputs import LLMResult
+from langchain_core.prompts import ChatPromptTemplate
 from werkzeug.utils import secure_filename
 
 from config import ZILLIZ_ENDPOINT, ZILLIZ_TOKEN, OPENAI_API_KEY, ZILLIZ_COLLECTION_NAME, OPENAI_CHAT_MODEL, \
-    Embedding_model_name, Embedding_model_kwargs, OPENAI_API_BASE
+    Embedding_model_name, Embedding_model_kwargs, OPENAI_API_BASE, chat_template
 
-os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
+# os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
 app = Flask(__name__)
 def logexcption(msg=None):
@@ -95,7 +96,7 @@ def embeddingFileAndUploadToZillizCloud():
         return {'success': True, 'result': file_key, 'errmsg': None}
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}
-        print(msg['errmsg'])
+        logexcption(msg['errmsg'])
         return msg
 
 class ChainStreamHandler(StreamingStdOutCallbackHandler):
@@ -105,7 +106,7 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
         self.finish = False
 
     def on_llm_new_token(self, token: str, **kwargs):
-        # print(token, end="")
+        print(token, end="")
         self.tokens.append(token)
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
@@ -123,32 +124,37 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
             else:
                 pass
 
-def chat_bot_milvus(question, chat_history):
-    encode_kwargs = {'normalize_embeddings': True}
-    embeddings = HuggingFaceBgeEmbeddings(model_name=Embedding_model_name,
-                                          model_kwargs=Embedding_model_kwargs,
-                                          encode_kwargs=encode_kwargs)
-    vectorStore = Milvus(embeddings, ZILLIZ_COLLECTION_NAME, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_TOKEN})
+def chat_bot(input_text, chat_history):
     handler = ChainStreamHandler()
     llm = ChatOpenAI(temperature=0, streaming=True, openai_api_key=OPENAI_API_KEY, model_name=OPENAI_CHAT_MODEL, callback_manager=CallbackManager([handler]))
-    retriever = vectorStore.as_retriever()
-    qa = ConversationalRetrievalChain.from_llm(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
-    thread = threading.Thread(target=async_run, args=(qa, question, chat_history))
+    chat_prompt = ChatPromptTemplate.from_template(template=chat_template)
+    # memory = ConversationTokenBufferMemory(llm=llm, max_token_limit=200)
+    # for history in chat_history:
+    #     memory.save_context({"input": history[0]}, {"output": history[1]})
+    # qa = LLMChain(llm=llm, prompt=chat_prompt, memory=memory, verbose=True)
+    qa = LLMChain(llm=llm, prompt=chat_prompt)
+    thread = threading.Thread(target=async_run, args=(qa, input_text))
     thread.start()
     return handler.generate_tokens()
 
-def async_run(qa, question, chat_history):
-    qa({"question": question, "chat_history": chat_history}, return_only_outputs=True)
+def async_run(qa, input_text):
+    qa.run(input=input_text)
 
 @app.route('/zillizchat/', methods=['POST'])
 def chat():
+    try:
+        # input_text = '狗粮、便宜、健康'
+        input_text = request.json.get('question')
+        # list_chat_history = request.json.get('chat_history', [])
+        tuple_chat_history = []
+        # for history in list_chat_history:
+        #     tuple_chat_history.append(tuple(history))
+        return Response(chat_bot(input_text, tuple_chat_history), mimetype="text/event-stream")
+    except Exception:
+        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}
+        logexcption(msg['errmsg'])
+        return msg
 
-    question = request.json.get('question')
-    list_chat_history = request.json.get('chat_history', [])
-    tuple_chat_history = []
-    for history in list_chat_history:
-        tuple_chat_history.append(tuple(history))
-    return Response(chat_bot_milvus(question, tuple_chat_history), mimetype="text/event-stream")
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

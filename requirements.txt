@@ -7,7 +7,7 @@ pymilvus==2.3.3
 pypdf==3.17.1
 requests==2.31.0
 pdfminer.six==20221105
-openai==0.27.8
+openai==1.8.0
 sentence-transformers==2.2.2
 torch==2.1.1
 torchvision==0.16.1

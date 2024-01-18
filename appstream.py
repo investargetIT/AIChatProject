@@ -235,11 +235,11 @@ def chat_bot(input_text, chat_history):
 def async_run(qa, input_text):
     qa.run(input=input_text)
 
-@app.route('/streamchat/', methods=['GET'])
+@app.route('/streamchat/', methods=['POST'])
 def chat():
     try:
-        input_text = '猫粮、耐存储、健康'
-        # input_text = request.json.get('question')
+        # input_text = '猫粮、耐存储、健康'
+        input_text = request.json.get('question')
         # list_chat_history = request.json.get('chat_history', [])
         tuple_chat_history = []
         # for history in list_chat_history:

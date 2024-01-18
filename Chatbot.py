@@ -1,13 +1,10 @@
 from openai import OpenAI
 import streamlit as st
+from config import OPENAI_API_BASE, OPENAI_API_KEY
 
-openai_api_key = "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"
-openai_api_base = 'http://8.219.158.94:4056/v1'
+st.write('<div style="display: flex;align-items: center;"><img src="http://peidibrand.com/assets/images/logo.png" /></div>', unsafe_allow_html=True)
 
-st.write('<div style="display: flex;align-items: center;"><img src="http://peidibrand.com/assets/images/logo.png" /><span style="margin-left: 10px;font-size: 32px;font-weight: bold;">Peidi 机器人</span></div>', unsafe_allow_html=True)
-st.caption("🚀 Powered by Streamlit")
-
-client = OpenAI(api_key=openai_api_key, base_url=openai_api_base)
+client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE)
 
 def update_system_prompt():
     st.session_state.messages[0]['content'] = st.session_state.system_prompt

@@ -6,22 +6,25 @@ import string
 import threading
 import traceback
 from typing import Any
+
+import openai
 import requests
 from flask import Flask, Response
 from flask import request
-from langchain.chains import LLMChain
+from langchain.chains import LLMChain, ConversationalRetrievalChain
+from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import PDFMinerLoader
 from langchain.embeddings import  HuggingFaceBgeEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Milvus
+from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_core.callbacks import StreamingStdOutCallbackHandler, CallbackManager
 from langchain_core.outputs import LLMResult
 from langchain_core.prompts import ChatPromptTemplate
 from werkzeug.utils import secure_filename
 
-from config import ZILLIZ_ENDPOINT, ZILLIZ_TOKEN, OPENAI_API_KEY, ZILLIZ_COLLECTION_NAME, OPENAI_CHAT_MODEL, \
-    Embedding_model_name, Embedding_model_kwargs, OPENAI_API_BASE, chat_template
+from config import OPENAI_API_BASE, chat_template, OPENAI_API_KEY, OPENAI_CHAT_MODEL
 
 os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
@@ -46,10 +49,10 @@ def getOpenAiChatResponse():
         chatdata = request.json['chatdata']
         aidata = request.json['aidata']
         OPENAI_URL = aidata['url']
-        # OPENAI_API_KEY = aidata['key']
+        open_ai_key = aidata['key']
         headers = {
             'Content-Type': "application/json",
-            'Authorization': "Bearer {}".format(OPENAI_API_KEY)
+            'Authorization': "Bearer {}".format(open_ai_key)
         }
         res = requests.post(OPENAI_URL, data=json.dumps(chatdata), headers=headers).content.decode()
         return {'success': True, 'result': res, 'errmsg': None}
@@ -67,37 +70,120 @@ def allowed_file(filename):
 
 def get_chat_history(inputs) -> str:
     return inputs
-@app.route('/embedzilliz/', methods=['POST'])
-def embeddingFileAndUploadToZillizCloud():
-    try:
-        file = request.files['file']
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            filetype = filename.split('.')[-1]
-            temp_key = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
-                random.sample(string.ascii_lowercase, 6))
-            file_key = '%s.%s' % (temp_key, filetype)
-            file_path = os.path.join(UPLOAD_FOLDER, file_key)
-            file.save(file_path)
-        else:
-            return {'success': False, 'result': None, 'errmsg': '文件不合格'}
 
-        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
+@app.route('/zillizchat/', methods=['POST'])
+def chatgptWithZillizCloud():
+    try:
+
+        # ZILLIZ_ENDPOINT = request.json.get('zilliz_url')
+        ZILLIZ_ENDPOINT = 'https://in03-d3b6ba8bbd0dfd0.api.gcp-us-west1.zillizcloud.com'
+        # ZILLIZ_token = request.json.get('zilliz_key')
+        ZILLIZ_token = '8e2b989c1a4c170e5c47b5324c0630d23c3085654923a654e3df081dbeae9c31c95923af0ec0d2bc4cf9ce5bb9d6fca43051c37d'
+        zilliz_collection_name = request.json.get('zilliz_collection_name')
+        chat_model = request.json.get('chat_model')
+        open_ai_key = request.json.get('open_ai_key')
+        question = request.json.get('question')
+        list_chat_history = request.json.get('chat_history', [])
+        logdata(list_chat_history)
+        tuple_chat_history = []
+        for history in list_chat_history:
+            tuple_chat_history.append(tuple(history))
+        logdata(tuple_chat_history)
+        os.environ["OPENAI_API_KEY"] = open_ai_key
+        # embeddings = SentenceTransformerEmbeddings(model_name="shibing624/text2vec-base-chinese")
+        model_name = "BAAI/bge-large-en-v1.5"
+        model_kwargs = {'device': 'cpu'}
         encode_kwargs = {'normalize_embeddings': True}
-        embeddings = HuggingFaceBgeEmbeddings(model_name=Embedding_model_name,
-                                              model_kwargs=Embedding_model_kwargs,
+        embeddings = HuggingFaceBgeEmbeddings(model_name=model_name,
+                                              model_kwargs=model_kwargs,
                                               encode_kwargs=encode_kwargs)
+        openai_ojb = ChatOpenAI(temperature=0, openai_api_key=open_ai_key, model_name=chat_model)
+        vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
+        chain = ConversationalRetrievalChain.from_llm(openai_ojb, vector_db.as_retriever())
+        tuple_chat_history.reverse()
+        result = chain({
+            'question': question,  # 传入问题
+            "chat_history": tuple_chat_history
+        })
+        return {'success': True, 'result': result, 'errmsg': None, 'reset': False}
+    except openai.error.InvalidRequestError:
+        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': True}
+        print(traceback.format_exc())
+        return msg
+    except Exception:
+        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': False}
+        print(traceback.format_exc())
+        return msg
+
+@app.route('/zillizchat/', methods=['POST'])
+def chatgptWithZillizCloud():
+    try:
+
+        ZILLIZ_ENDPOINT = request.json.get('zilliz_url')
+        ZILLIZ_token = request.json.get('zilliz_key')
+        zilliz_collection_name = request.json.get('zilliz_collection_name')
+        chat_model = request.json.get('chat_model')
+        open_ai_key = request.json.get('open_ai_key')
+        question = request.json.get('question')
+        list_chat_history = request.json.get('chat_history', [])
+        logdata(list_chat_history)
+        tuple_chat_history = []
+        for history in list_chat_history:
+            tuple_chat_history.append(tuple(history))
+        logdata(tuple_chat_history)
+        os.environ["OPENAI_API_KEY"] = open_ai_key
+        embeddings = SentenceTransformerEmbeddings(model_name="shibing624/text2vec-base-chinese")
+        openai_ojb = ChatOpenAI(temperature=0, openai_api_key=open_ai_key, model_name=chat_model)
+        vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
+        chain = ConversationalRetrievalChain.from_llm(openai_ojb, vector_db.as_retriever())
+        tuple_chat_history.reverse()
+        result = chain({
+            'question': question,  # 传入问题
+            "chat_history": tuple_chat_history
+        })
+        return {'success': True, 'result': result, 'errmsg': None, 'reset': False}
+    except openai.error.InvalidRequestError:
+        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': True}
+        print(traceback.format_exc())
+        return msg
+    except Exception:
+        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': False}
+        print(traceback.format_exc())
+        return msg
+
+
+@app.route('/pdfchat/', methods=['POST'])
+def chatgptWithPDFFile():
+    try:
+
+        chat_model = request.json.get('chat_model')
+        open_ai_key = request.json.get('open_ai_key')
+        question = request.json.get('question')
+        file_key = request.json.get('file_key')
+        file_path = os.path.join(UPLOAD_FOLDER, file_key)
         loader = PDFMinerLoader(file_path)
         documents = loader.load()
         text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
         docs = text_splitter.split_documents(documents)
-        logdata(file_key)
-        Milvus.from_documents(docs, embeddings, collection_name=ZILLIZ_COLLECTION_NAME, connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_TOKEN})
-        return {'success': True, 'result': file_key, 'errmsg': None}
-    except Exception:
-        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}
-        logexcption(msg['errmsg'])
+
+        os.environ["OPENAI_API_KEY"] = open_ai_key
+        openai_ojb = ChatOpenAI(temperature=0, model_name=chat_model)
+        chain = load_qa_chain(openai_ojb, chain_type="stuff")
+
+        result = chain.run(input_documents=docs, question=question)
+        return {'success': True, 'result': result, 'errmsg': None, 'reset': False}
+    except openai.error.InvalidRequestError:
+        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': True}
+        print(traceback.format_exc())
         return msg
+    except Exception:
+        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': False}
+        print(traceback.format_exc())
+        return msg
+
+
+
 
 class ChainStreamHandler(StreamingStdOutCallbackHandler):
     def __init__(self):
@@ -140,11 +226,11 @@ def chat_bot(input_text, chat_history):
 def async_run(qa, input_text):
     qa.run(input=input_text)
 
-@app.route('/streamchat/', methods=['POST'])
+@app.route('/streamchat/', methods=['GET'])
 def chat():
     try:
-        # input_text = '狗粮、便宜、健康'
-        input_text = request.json.get('question')
+        input_text = '猫粮、耐存储、健康'
+        # input_text = request.json.get('question')
         # list_chat_history = request.json.get('chat_history', [])
         tuple_chat_history = []
         # for history in list_chat_history:

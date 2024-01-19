@@ -42,10 +42,9 @@ with st.sidebar:
         on_change=update_system_prompt,
     )
 
-    st.write('# Past Chats')
     if st.session_state.get('chat_id') is None:
         st.session_state.chat_id = st.selectbox(
-            label='Pick a past chat',
+            label='聊天记录',
             options=[new_chat_id] + list(past_chats.keys()),
             format_func=lambda x: past_chats.get(x, 'New Chat'),
             placeholder='_',
@@ -53,7 +52,7 @@ with st.sidebar:
     else:
         # This will happen the first time AI response comes in
         st.session_state.chat_id = st.selectbox(
-            label='Pick a past chat',
+            label='聊天记录',
             options=[new_chat_id, st.session_state.chat_id] + list(past_chats.keys()),
             index=1,
             format_func=lambda x: past_chats.get(x, 'New Chat' if x != st.session_state.chat_id else st.session_state.chat_title),

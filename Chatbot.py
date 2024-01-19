@@ -22,6 +22,7 @@ except:
 # Load past chats (if available)
 try:
     past_chats: dict = joblib.load('data/past_chats_list')
+    print(past_chats)
 except:
     past_chats = {}
 
@@ -41,27 +42,33 @@ with st.sidebar:
         key="system_prompt",
         on_change=update_system_prompt,
     )
-
-    if st.session_state.get('chat_id') is None:
-        st.session_state.chat_id = st.selectbox(
-            label='聊天记录',
-            options=[new_chat_id] + list(past_chats.keys()),
-            format_func=lambda x: past_chats.get(x, 'New Chat'),
-            placeholder='_',
-        )
-    else:
-        # This will happen the first time AI response comes in
-        st.session_state.chat_id = st.selectbox(
-            label='聊天记录',
-            options=[new_chat_id, st.session_state.chat_id] + list(past_chats.keys()),
-            index=1,
-            format_func=lambda x: past_chats.get(x, 'New Chat' if x != st.session_state.chat_id else st.session_state.chat_title),
-            placeholder='_',
-        )
+    
+    st.session_state.chat_id = st.selectbox(
+        label='聊天记录',
+        options=[new_chat_id] + list(past_chats.keys()),
+        format_func=lambda x: past_chats.get(x, 'New Chat'),
+        placeholder='_',
+    )
+    # print(st.session_state.get('chat_id'))
+    # if st.session_state.get('chat_id') is None:
+    #     st.session_state.chat_id = st.selectbox(
+    #         label='聊天记录',
+    #         options=[new_chat_id] + list(past_chats.keys()),
+    #         format_func=lambda x: past_chats.get(x, 'New Chat'),
+    #         placeholder='_',
+    #     )
+    # else:
+    #     # This will happen the first time AI response comes in
+    #     st.session_state.chat_id = st.selectbox(
+    #         label='聊天记录',
+    #         options=[new_chat_id, st.session_state.chat_id] + list(past_chats.keys()),
+    #         # index=1,
+    #         format_func=lambda x: past_chats.get(x, 'New Chat' if x != st.session_state.chat_id else st.session_state.chat_title),
+    #         placeholder='_',
+    #     )
     # Save new chats after a message has been sent to AI
     # TODO: Give user a chance to name chat
     st.session_state.chat_title = f'ChatSession-{st.session_state.chat_id}'
-    print(st.session_state.chat_title)
 
 if "openai_model" not in st.session_state:
     st.session_state["openai_model"] = "gpt-3.5-turbo-1106"
@@ -71,10 +78,10 @@ try:
     st.session_state.messages = joblib.load(
         f'data/{st.session_state.chat_id}-st_messages'
     )
-    print('old cache')
+    # print('old cache')
 except:
     st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]
-    print('new_cache made')
+    # print('new_cache made')
 
 # if "messages" not in st.session_state:
 #     st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]

@@ -49,25 +49,6 @@ with st.sidebar:
         format_func=lambda x: past_chats.get(x, 'New Chat'),
         placeholder='_',
     )
-    # print(st.session_state.get('chat_id'))
-    # if st.session_state.get('chat_id') is None:
-    #     st.session_state.chat_id = st.selectbox(
-    #         label='聊天记录',
-    #         options=[new_chat_id] + list(past_chats.keys()),
-    #         format_func=lambda x: past_chats.get(x, 'New Chat'),
-    #         placeholder='_',
-    #     )
-    # else:
-    #     # This will happen the first time AI response comes in
-    #     st.session_state.chat_id = st.selectbox(
-    #         label='聊天记录',
-    #         options=[new_chat_id, st.session_state.chat_id] + list(past_chats.keys()),
-    #         # index=1,
-    #         format_func=lambda x: past_chats.get(x, 'New Chat' if x != st.session_state.chat_id else st.session_state.chat_title),
-    #         placeholder='_',
-    #     )
-    # Save new chats after a message has been sent to AI
-    # TODO: Give user a chance to name chat
     st.session_state.chat_title = f'ChatSession-{st.session_state.chat_id}'
 
 if "openai_model" not in st.session_state:

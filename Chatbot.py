@@ -22,11 +22,10 @@ except:
 # Load past chats (if available)
 try:
     past_chats: dict = joblib.load('data/past_chats_list')
-    print(past_chats)
 except:
     past_chats = {}
 
-st.write('<div style="display: flex;align-items: center;"><img src="http://peidibrand.com/assets/images/logo.png" /></div>', unsafe_allow_html=True)
+st.image('http://peidibrand.com/assets/images/logo.png')
 
 with st.sidebar:
     st.radio(

@@ -17,7 +17,6 @@ if st.button("生成", type="primary"):
     full_response = ""
     r = requests.post('http://127.0.0.1:5000/streamchat/', json={'keyWord': st.session_state.key_word, 'wordType': st.session_state.word_type}, stream=True)
     for chunk in r.iter_content(decode_unicode=True):
-        print(chunk)
         full_response += chunk
         message_placeholder.write(full_response + "▌")
     message_placeholder.write(full_response)

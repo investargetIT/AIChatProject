@@ -16,15 +16,15 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import PDFMinerLoader
 from langchain.embeddings import HuggingFaceBgeEmbeddings
+from langchain.prompts import NGramOverlapExampleSelector
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Milvus
-from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_core.callbacks import StreamingStdOutCallbackHandler, CallbackManager
 from langchain_core.outputs import LLMResult
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, FewShotPromptTemplate
 from werkzeug.utils import secure_filename
 
-from config import OPENAI_API_BASE, chat_template, OPENAI_API_KEY, OPENAI_CHAT_MODEL
+from config import OPENAI_API_BASE, OPENAI_API_KEY, OPENAI_CHAT_MODEL, peidi_examples, peidi_example_formatter_template
 
 os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
@@ -219,32 +219,57 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
             else:
                 pass
 
-def chat_bot(input_text, chat_history):
+def chat_bot(wordType, keyWord):
     handler = ChainStreamHandler()
-    llm = ChatOpenAI(temperature=0, streaming=True, openai_api_key=OPENAI_API_KEY, model_name=OPENAI_CHAT_MODEL, callback_manager=CallbackManager([handler]))
-    chat_prompt = ChatPromptTemplate.from_template(template=chat_template)
+    llm = ChatOpenAI(temperature=0,
+                     streaming=True,
+                     openai_api_key=OPENAI_API_KEY,
+                     model_name=OPENAI_CHAT_MODEL,
+                     callback_manager=CallbackManager([handler]))
+    # chat_prompt = ChatPromptTemplate.from_template(template=chat_template)
+    examples = []
+    for example in peidi_examples:
+        if example['wordType'] == wordType:
+            examples.append(example)
+    example_prompt = PromptTemplate(
+        input_variables=['wordType', 'keyWord', 'result'],
+        template=peidi_example_formatter_template)
+    example_selector = NGramOverlapExampleSelector(
+        examples=examples,
+        example_prompt=example_prompt,
+        threshold=-1  # =-1 示例排序，不排除；=0  排除 无重叠；>0 <1 选择相似度大于  ； >1 不选择任何示例
+    )
+    chat_prompt = FewShotPromptTemplate(
+        example_selector=example_selector,
+        example_prompt=example_prompt,
+        prefix="",
+        suffix="文风:{wordType}\n关键词:{keyWord}\n-----\n结果: ",
+        input_variables=['wordType', 'keyWord'],
+    )
+    print(chat_prompt.format(wordType=wordType,keyWord=keyWord))
     # memory = ConversationTokenBufferMemory(llm=llm, max_token_limit=200)
     # for history in chat_history:
     #     memory.save_context({"input": history[0]}, {"output": history[1]})
     # qa = LLMChain(llm=llm, prompt=chat_prompt, memory=memory, verbose=True)
     qa = LLMChain(llm=llm, prompt=chat_prompt)
-    thread = threading.Thread(target=async_run, args=(qa, input_text))
+    thread = threading.Thread(target=async_run, args=(qa, wordType, keyWord))
     thread.start()
     return handler.generate_tokens()
 
-def async_run(qa, input_text):
-    qa.run(input=input_text)
+def async_run(qa, wordType, keyWord):
+    qa.run(wordType=wordType,keyWord=keyWord)
 
 @app.route('/streamchat/', methods=['POST'])
 def chat():
     try:
         # input_text = '猫粮、耐存储、健康'
-        input_text = request.json.get('question')
+        wordType = request.json.get('wordType')
+        keyWord = request.json.get('keyWord')
         # list_chat_history = request.json.get('chat_history', [])
         tuple_chat_history = []
         # for history in list_chat_history:
         #     tuple_chat_history.append(tuple(history))
-        return Response(chat_bot(input_text, tuple_chat_history), mimetype="text/event-stream")
+        return Response(chat_bot(wordType, keyWord), mimetype="text/event-stream")
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}
         logexcption(msg['errmsg'])
@@ -253,3 +278,4 @@ def chat():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+

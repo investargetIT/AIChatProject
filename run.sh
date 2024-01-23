@@ -4,6 +4,7 @@
 docker run -d \
   -p 5000:5000 \
   -p 8501:8501 \
+  -v $(pwd)/pages:/app/pages \
   -v $(pwd)/upload:/app/upload \
   -v $(pwd)/Chatbot.py:/app/Chatbot.py \
   -v $(pwd)/appstream.py:/app/appstream.py \

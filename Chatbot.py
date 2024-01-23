@@ -42,39 +42,39 @@ with st.sidebar:
         on_change=update_system_prompt,
     )
     
-    st.session_state.chat_id = st.selectbox(
-        label='聊天记录',
-        options=[new_chat_id] + list(past_chats.keys()),
-        format_func=lambda x: past_chats.get(x, 'New Chat'),
-        placeholder='_',
-    )
-    st.session_state.chat_title = f'ChatSession-{st.session_state.chat_id}'
+    # st.session_state.chat_id = st.selectbox(
+    #     label='聊天记录',
+    #     options=[new_chat_id] + list(past_chats.keys()),
+    #     format_func=lambda x: past_chats.get(x, 'New Chat'),
+    #     placeholder='_',
+    # )
+    # st.session_state.chat_title = f'ChatSession-{st.session_state.chat_id}'
 
 if "openai_model" not in st.session_state:
     st.session_state["openai_model"] = "gpt-3.5-turbo-1106"
 
-# Chat history (allows to ask multiple questions)
-try:
-    st.session_state.messages = joblib.load(
-        f'data/{st.session_state.chat_id}-st_messages'
-    )
-    # print('old cache')
-except:
-    st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]
-    # print('new_cache made')
-
-# if "messages" not in st.session_state:
+# # Chat history (allows to ask multiple questions)
+# try:
+#     st.session_state.messages = joblib.load(
+#         f'data/{st.session_state.chat_id}-st_messages'
+#     )
+#     # print('old cache')
+# except:
 #     st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]
+#     # print('new_cache made')
+
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 if prompt := st.chat_input("What is up?"):
-    # Save this as a chat for later
-    if st.session_state.chat_id not in past_chats.keys():
-        past_chats[st.session_state.chat_id] = st.session_state.chat_title
-        joblib.dump(past_chats, 'data/past_chats_list')
+    # # Save this as a chat for later
+    # if st.session_state.chat_id not in past_chats.keys():
+    #     past_chats[st.session_state.chat_id] = st.session_state.chat_title
+    #     joblib.dump(past_chats, 'data/past_chats_list')
 
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -96,7 +96,7 @@ if prompt := st.chat_input("What is up?"):
         message_placeholder.markdown(full_response)
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-    joblib.dump(
-        st.session_state.messages,
-        f'data/{st.session_state.chat_id}-st_messages',
-    )
+    # joblib.dump(
+    #     st.session_state.messages,
+    #     f'data/{st.session_state.chat_id}-st_messages',
+    # )

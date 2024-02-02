@@ -24,7 +24,8 @@ from langchain_core.outputs import LLMResult
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, FewShotPromptTemplate
 from werkzeug.utils import secure_filename
 
-from config import OPENAI_API_BASE, OPENAI_API_KEY, OPENAI_CHAT_MODEL, peidi_examples, peidi_example_formatter_template
+from config import OPENAI_API_BASE, OPENAI_API_KEY, OPENAI_CHAT_MODEL, peidi_examples, peidi_example_formatter_template, \
+    peidi_result_formatter_template
 
 os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
@@ -243,7 +244,7 @@ def chat_bot(wordType, keyWord):
         example_selector=example_selector,
         example_prompt=example_prompt,
         prefix="",
-        suffix="文风:{wordType}\n关键词:{keyWord}\n-----\n结果: ",
+        suffix=peidi_result_formatter_template,
         input_variables=['wordType', 'keyWord'],
     )
     print(chat_prompt.format(wordType=wordType,keyWord=keyWord))

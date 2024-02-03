@@ -98,9 +98,9 @@ def embeddingFileAndUploadToZillizCloud():
         # ZILLIZ_token = request.form.get('zilliz_key')
         ZILLIZ_token = '8e2b989c1a4c170e5c47b5324c0630d23c3085654923a654e3df081dbeae9c31c95923af0ec0d2bc4cf9ce5bb9d6fca43051c37d'
         zilliz_collection_name = request.form.get('zilliz_collection_name')
-        OPENAI_API_KEY = request.form.get('open_ai_key')
-
-        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+        # OPENAI_API_KEY = request.form.get('open_ai_key')
+        #
+        # os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
         # embeddings = SentenceTransformerEmbeddings(model_name="shibing624/text2vec-base-chinese")
         model_name = "BAAI/bge-large-en-v1.5"
         model_kwargs = {'device': 'cpu'}
@@ -129,8 +129,8 @@ def chatgptWithZillizCloud():
         # ZILLIZ_token = request.json.get('zilliz_key')
         ZILLIZ_token = '8e2b989c1a4c170e5c47b5324c0630d23c3085654923a654e3df081dbeae9c31c95923af0ec0d2bc4cf9ce5bb9d6fca43051c37d'
         zilliz_collection_name = request.json.get('zilliz_collection_name')
-        chat_model = request.json.get('chat_model')
-        open_ai_key = request.json.get('open_ai_key')
+        # chat_model = request.json.get('chat_model')
+        # open_ai_key = request.json.get('open_ai_key')
         question = request.json.get('question')
         list_chat_history = request.json.get('chat_history', [])
         logdata(list_chat_history)
@@ -138,16 +138,17 @@ def chatgptWithZillizCloud():
         for history in list_chat_history:
             tuple_chat_history.append(tuple(history))
         logdata(tuple_chat_history)
-        os.environ["OPENAI_API_KEY"] = open_ai_key
+        # os.environ["OPENAI_API_KEY"] = open_ai_key
         model_name = "BAAI/bge-large-en-v1.5"
         model_kwargs = {'device': 'cpu'}
         encode_kwargs = {'normalize_embeddings': True}
         embeddings = HuggingFaceBgeEmbeddings(model_name=model_name,
                                               model_kwargs=model_kwargs,
                                               encode_kwargs=encode_kwargs)
-        openai_ojb = ChatOpenAI(temperature=0, openai_api_key=open_ai_key, model_name=chat_model)
+        # openai_ojb = ChatOpenAI(temperature=0, openai_api_key=open_ai_key, model_name=chat_model)
+        llm = ChatBaichuan(temperature=0, baichuan_api_key=BAICHUAN_API_KEY, model=BAICHUAN_CHAT_MODEL)
         vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
-        chain = ConversationalRetrievalChain.from_llm(openai_ojb, vector_db.as_retriever())
+        chain = ConversationalRetrievalChain.from_llm(llm, vector_db.as_retriever())
         tuple_chat_history.reverse()
         result = chain({
             'question': question,  # 传入问题
@@ -178,9 +179,12 @@ def chatgptWithPDFFile():
         text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
         docs = text_splitter.split_documents(documents)
 
-        os.environ["OPENAI_API_KEY"] = open_ai_key
-        openai_ojb = ChatOpenAI(temperature=0, model_name=chat_model)
-        chain = load_qa_chain(openai_ojb, chain_type="stuff")
+        # os.environ["OPENAI_API_KEY"] = open_ai_key
+        # openai_ojb = ChatOpenAI(temperature=0, model_name=chat_model)
+        llm = ChatBaichuan(temperature=0,
+                           baichuan_api_key=BAICHUAN_API_KEY,
+                           model=BAICHUAN_CHAT_MODEL)
+        chain = load_qa_chain(llm, chain_type="stuff")
 
         result = chain.run(input_documents=docs, question=question)
         return {'success': True, 'result': result, 'errmsg': None, 'reset': False}

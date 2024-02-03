@@ -18,7 +18,7 @@ from langchain.document_loaders import PDFMinerLoader
 from langchain.embeddings import HuggingFaceBgeEmbeddings
 from langchain.prompts import NGramOverlapExampleSelector
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores import Milvus
+from langchain.vectorstores.zilliz import Zilliz
 from langchain_community.chat_models import ChatBaichuan
 from langchain_core.callbacks import StreamingStdOutCallbackHandler, CallbackManager
 from langchain_core.outputs import LLMResult
@@ -101,8 +101,10 @@ def embeddingFileAndUploadToZillizCloud():
         documents = loader.load()
         text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
         docs = text_splitter.split_documents(documents)
-        logdata(file_key)
-        Milvus.from_documents(docs, embeddings, collection_name=zilliz_collection_name, connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
+        # logdata(file_key)
+        Zilliz.from_documents(documents=docs, embedding=embeddings,
+                              collection_name=zilliz_collection_name,
+                              connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
         return {'success': True, 'result': file_key, 'errmsg': None}
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}
@@ -121,17 +123,26 @@ def chatgptWithZillizCloud():
         embedding_model = request.json.get('embedding_model')
         question = request.json.get('question')
         list_chat_history = request.json.get('chat_history', [])
-        logdata(list_chat_history)
+        # logdata(list_chat_history)
         tuple_chat_history = []
         for history in list_chat_history:
             tuple_chat_history.append(tuple(history))
-        logdata(tuple_chat_history)
+        # logdata(tuple_chat_history)
         embeddings = HuggingFaceBgeEmbeddings(model_name=embedding_model,
                                               model_kwargs={'device': 'cpu'},
                                               encode_kwargs={'normalize_embeddings': True})
         llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
-        vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
-        chain = ConversationalRetrievalChain.from_llm(llm, vector_db.as_retriever())
+        # vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
+        vector_db = Zilliz(embedding_function=embeddings, collection_name=zilliz_collection_name,
+                           connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
+        prompt_template = """基于以下已知内容，简洁和专业的来回答用户的问题。
+                            已知内容:
+                                {context}
+                            问题:
+                                {question}"""
+        prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+        chain = ConversationalRetrievalChain.from_llm(llm, vector_db.as_retriever(),
+                                                      combine_docs_chain_kwargs={'prompt': prompt})
         tuple_chat_history.reverse()
         result = chain({
             'question': question,  # 传入问题

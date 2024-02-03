@@ -19,13 +19,14 @@ from langchain.embeddings import HuggingFaceBgeEmbeddings
 from langchain.prompts import NGramOverlapExampleSelector
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Milvus
+from langchain_community.chat_models import ChatBaichuan
 from langchain_core.callbacks import StreamingStdOutCallbackHandler, CallbackManager
 from langchain_core.outputs import LLMResult
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, FewShotPromptTemplate
 from werkzeug.utils import secure_filename
 
 from config import OPENAI_API_BASE, OPENAI_API_KEY, OPENAI_CHAT_MODEL, peidi_examples, peidi_example_formatter_template, \
-    peidi_result_formatter_template
+    peidi_result_formatter_template, BAICHUAN_API_KEY, BAICHUAN_CHAT_MODEL
 
 os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
@@ -222,11 +223,11 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 def chat_bot(wordType, keyWord):
     handler = ChainStreamHandler()
-    llm = ChatOpenAI(temperature=0,
-                     streaming=True,
-                     openai_api_key=OPENAI_API_KEY,
-                     model_name=OPENAI_CHAT_MODEL,
-                     callback_manager=CallbackManager([handler]))
+    llm = ChatBaichuan(temperature=0,
+                        streaming=True,
+                        baichuan_api_key=BAICHUAN_API_KEY,
+                        model=BAICHUAN_CHAT_MODEL,
+                        callback_manager=CallbackManager([handler]))
     # chat_prompt = ChatPromptTemplate.from_template(template=chat_template)
     examples = []
     for example in peidi_examples:

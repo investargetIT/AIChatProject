@@ -28,7 +28,7 @@ from werkzeug.utils import secure_filename
 from config import OPENAI_API_BASE, OPENAI_API_KEY, OPENAI_CHAT_MODEL, peidi_examples, peidi_example_formatter_template, \
     peidi_result_formatter_template, BAICHUAN_API_KEY, BAICHUAN_CHAT_MODEL
 
-os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
+# os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
 app = Flask(__name__)
 
@@ -54,13 +54,13 @@ def getOpenAiChatResponse():
     try:
         chatdata = request.json['chatdata']
         aidata = request.json['aidata']
-        OPENAI_URL = aidata['url']
-        open_ai_key = aidata['key']
+        AI_URL = aidata['url']
+        ai_key = aidata['key']
         headers = {
             'Content-Type': "application/json",
-            'Authorization': "Bearer {}".format(open_ai_key)
+            'Authorization': "Bearer {}".format(ai_key)
         }
-        res = requests.post(OPENAI_URL, data=json.dumps(chatdata), headers=headers).content.decode()
+        res = requests.post(AI_URL, data=json.dumps(chatdata), headers=headers).content.decode()
         return {'success': True, 'result': res, 'errmsg': None}
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}
@@ -73,9 +73,6 @@ ALLOWED_EXTENSIONS = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif']
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'upload')
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
-
-def get_chat_history(inputs) -> str:
-    return inputs
 
 
 @app.route('/embedzilliz/', methods=['POST'])
@@ -93,21 +90,13 @@ def embeddingFileAndUploadToZillizCloud():
         else:
             return {'success': False, 'result': None, 'errmsg': '文件不合格'}
 
-        # ZILLIZ_ENDPOINT = request.form.get('zilliz_url')
-        ZILLIZ_ENDPOINT = 'https://in03-d3b6ba8bbd0dfd0.api.gcp-us-west1.zillizcloud.com'
-        # ZILLIZ_token = request.form.get('zilliz_key')
-        ZILLIZ_token = '8e2b989c1a4c170e5c47b5324c0630d23c3085654923a654e3df081dbeae9c31c95923af0ec0d2bc4cf9ce5bb9d6fca43051c37d'
+        ZILLIZ_ENDPOINT = request.form.get('zilliz_url')
+        ZILLIZ_token = request.form.get('zilliz_key')
         zilliz_collection_name = request.form.get('zilliz_collection_name')
-        # OPENAI_API_KEY = request.form.get('open_ai_key')
-        #
-        # os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-        # embeddings = SentenceTransformerEmbeddings(model_name="shibing624/text2vec-base-chinese")
-        model_name = "BAAI/bge-large-en-v1.5"
-        model_kwargs = {'device': 'cpu'}
-        encode_kwargs = {'normalize_embeddings': True}
-        embeddings = HuggingFaceBgeEmbeddings(model_name=model_name,
-                                              model_kwargs=model_kwargs,
-                                              encode_kwargs=encode_kwargs)
+        embedding_model = request.json.get('embedding_model')
+        embeddings = HuggingFaceBgeEmbeddings(model_name=embedding_model,
+                                              model_kwargs={'device': 'cpu'},
+                                              encode_kwargs={'normalize_embeddings': True})
         loader = PDFMinerLoader(file_path)
         documents = loader.load()
         text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
@@ -124,13 +113,12 @@ def embeddingFileAndUploadToZillizCloud():
 def chatgptWithZillizCloud():
     try:
 
-        # ZILLIZ_ENDPOINT = request.json.get('zilliz_url')
-        ZILLIZ_ENDPOINT = 'https://in03-d3b6ba8bbd0dfd0.api.gcp-us-west1.zillizcloud.com'
-        # ZILLIZ_token = request.json.get('zilliz_key')
-        ZILLIZ_token = '8e2b989c1a4c170e5c47b5324c0630d23c3085654923a654e3df081dbeae9c31c95923af0ec0d2bc4cf9ce5bb9d6fca43051c37d'
+        ZILLIZ_ENDPOINT = request.json.get('zilliz_url')
+        ZILLIZ_token = request.json.get('zilliz_key')
         zilliz_collection_name = request.json.get('zilliz_collection_name')
-        # chat_model = request.json.get('chat_model')
-        # open_ai_key = request.json.get('open_ai_key')
+        chat_model = request.json.get('chat_model')
+        ai_key = request.json.get('ai_key')
+        embedding_model = request.json.get('embedding_model')
         question = request.json.get('question')
         list_chat_history = request.json.get('chat_history', [])
         logdata(list_chat_history)
@@ -138,15 +126,10 @@ def chatgptWithZillizCloud():
         for history in list_chat_history:
             tuple_chat_history.append(tuple(history))
         logdata(tuple_chat_history)
-        # os.environ["OPENAI_API_KEY"] = open_ai_key
-        model_name = "BAAI/bge-large-en-v1.5"
-        model_kwargs = {'device': 'cpu'}
-        encode_kwargs = {'normalize_embeddings': True}
-        embeddings = HuggingFaceBgeEmbeddings(model_name=model_name,
-                                              model_kwargs=model_kwargs,
-                                              encode_kwargs=encode_kwargs)
-        # openai_ojb = ChatOpenAI(temperature=0, openai_api_key=open_ai_key, model_name=chat_model)
-        llm = ChatBaichuan(temperature=0, baichuan_api_key=BAICHUAN_API_KEY, model=BAICHUAN_CHAT_MODEL)
+        embeddings = HuggingFaceBgeEmbeddings(model_name=embedding_model,
+                                              model_kwargs={'device': 'cpu'},
+                                              encode_kwargs={'normalize_embeddings': True})
+        llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
         vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
         chain = ConversationalRetrievalChain.from_llm(llm, vector_db.as_retriever())
         tuple_chat_history.reverse()
@@ -155,10 +138,6 @@ def chatgptWithZillizCloud():
             "chat_history": tuple_chat_history
         })
         return {'success': True, 'result': result, 'errmsg': None, 'reset': False}
-    except openai.error.InvalidRequestError:
-        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': True}
-        print(traceback.format_exc())
-        return msg
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': False}
         print(traceback.format_exc())
@@ -170,7 +149,7 @@ def chatgptWithPDFFile():
     try:
 
         chat_model = request.json.get('chat_model')
-        open_ai_key = request.json.get('open_ai_key')
+        ai_key = request.json.get('ai_key')
         question = request.json.get('question')
         file_key = request.json.get('file_key')
         file_path = os.path.join(UPLOAD_FOLDER, file_key)
@@ -178,14 +157,8 @@ def chatgptWithPDFFile():
         documents = loader.load()
         text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
         docs = text_splitter.split_documents(documents)
-
-        # os.environ["OPENAI_API_KEY"] = open_ai_key
-        # openai_ojb = ChatOpenAI(temperature=0, model_name=chat_model)
-        llm = ChatBaichuan(temperature=0,
-                           baichuan_api_key=BAICHUAN_API_KEY,
-                           model=BAICHUAN_CHAT_MODEL)
+        llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
         chain = load_qa_chain(llm, chain_type="stuff")
-
         result = chain.run(input_documents=docs, question=question)
         return {'success': True, 'result': result, 'errmsg': None, 'reset': False}
     except openai.error.InvalidRequestError:

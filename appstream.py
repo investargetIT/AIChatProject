@@ -161,8 +161,12 @@ def chatgptWithPDFFile():
         documents = loader.load()
         text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
         docs = text_splitter.split_documents(documents)
+        prompt_template = """基于以下已知内容，简洁和专业的来回答用户的问题。如果无法从中得到答案，请说"根据已知内容无法回答该问题" 
+                    答案请使用中文。已知内容:{context} 问题:{question}"""
+        prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
         llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
-        chain = load_qa_chain(llm, chain_type="stuff")
+        chain = load_qa_chain(llm, chain_type="stuff", prompt=prompt)
+
         result = chain.run(input_documents=docs, question=question)
         return {'success': True, 'result': result, 'errmsg': None, 'reset': False}
     except Exception:

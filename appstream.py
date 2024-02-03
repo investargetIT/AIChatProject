@@ -13,9 +13,8 @@ from flask import Flask, Response
 from flask import request
 from langchain.chains import LLMChain, ConversationalRetrievalChain
 from langchain.chains.question_answering import load_qa_chain
-from langchain.chat_models import ChatOpenAI
-from langchain.document_loaders import PDFMinerLoader
-from langchain.embeddings import HuggingFaceBgeEmbeddings
+from langchain_community.document_loaders import PDFMinerLoader
+from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain.prompts import NGramOverlapExampleSelector
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores.zilliz import Zilliz
@@ -89,11 +88,10 @@ def embeddingFileAndUploadToZillizCloud():
             file.save(file_path)
         else:
             return {'success': False, 'result': None, 'errmsg': '文件不合格'}
-
         ZILLIZ_ENDPOINT = request.form.get('zilliz_url')
         ZILLIZ_token = request.form.get('zilliz_key')
         zilliz_collection_name = request.form.get('zilliz_collection_name')
-        embedding_model = request.json.get('embedding_model')
+        embedding_model = request.form.get('embedding_model')
         embeddings = HuggingFaceBgeEmbeddings(model_name=embedding_model,
                                               model_kwargs={'device': 'cpu'},
                                               encode_kwargs={'normalize_embeddings': True})
@@ -101,10 +99,8 @@ def embeddingFileAndUploadToZillizCloud():
         documents = loader.load()
         text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
         docs = text_splitter.split_documents(documents)
-        # logdata(file_key)
-        Zilliz.from_documents(documents=docs, embedding=embeddings,
-                              collection_name=zilliz_collection_name,
-                              connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
+        Zilliz(embedding_function=embeddings, collection_name=zilliz_collection_name,
+               connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token}).add_documents(docs)
         return {'success': True, 'result': file_key, 'errmsg': None}
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}

@@ -135,11 +135,8 @@ def chatgptWithZillizCloud():
         # vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
         vector_db = Zilliz(embedding_function=embeddings, collection_name=zilliz_collection_name,
                            connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
-        prompt_template = """基于以下已知内容，简洁和专业的来回答用户的问题。
-                            已知内容:
-                                {context}
-                            问题:
-                                {question}"""
+        prompt_template = """基于以下已知内容，简洁和专业的来回答用户的问题。如果无法从中得到答案，请说"根据已知内容无法回答该问题" 
+            答案请使用中文。已知内容:{context} 问题:{question}"""
         prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
         chain = ConversationalRetrievalChain.from_llm(llm, vector_db.as_retriever(),
                                                       combine_docs_chain_kwargs={'prompt': prompt})

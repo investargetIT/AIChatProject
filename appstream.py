@@ -165,10 +165,6 @@ def chatgptWithPDFFile():
         chain = load_qa_chain(llm, chain_type="stuff")
         result = chain.run(input_documents=docs, question=question)
         return {'success': True, 'result': result, 'errmsg': None, 'reset': False}
-    except openai.error.InvalidRequestError:
-        msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': True}
-        print(traceback.format_exc())
-        return msg
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc(), 'reset': False}
         print(traceback.format_exc())

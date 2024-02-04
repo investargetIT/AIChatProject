@@ -1,6 +1,6 @@
 #!/bin/bash
 
 flask --app appstream run --host=0.0.0.0 &
-streamlit run Chatbot.py &
+streamlit run pages/Text_Generation.py &
 wait -n
 exit $?

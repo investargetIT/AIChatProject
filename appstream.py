@@ -18,7 +18,7 @@ from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain.prompts import NGramOverlapExampleSelector
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores.zilliz import Zilliz
-from langchain_community.chat_models import ChatBaichuan
+from langchain_community.chat_models import ChatBaichuan, ChatOpenAI
 from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain_core.callbacks import StreamingStdOutCallbackHandler, CallbackManager
 from langchain_core.outputs import LLMResult
@@ -203,19 +203,29 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
             else:
                 pass
 
-def chat_bot(wordType, keyWord):
+def chat_bot(wordType, keyWord, AI_TYPE):
     handler = ChainStreamHandler()
-    # llm = ChatBaichuan(temperature=0,
-    #                     streaming=True,
-    #                     baichuan_api_key=BAICHUAN_API_KEY,
-    #                     model=BAICHUAN_CHAT_MODEL,
-    #                     callback_manager=CallbackManager([handler]))
-    llm = ChatTongyi(
-        streaming=True,
-        dashscope_api_key=DASHSCOPE_API_KEY,
-        model=DASHSCOPE_CHAT_MODEL,
-        callback_manager=CallbackManager([handler]),
-    )
+    if AI_TYPE == 'BAICHUAN':
+        llm = ChatBaichuan(temperature=0,
+                            streaming=True,
+                            baichuan_api_key=BAICHUAN_API_KEY,
+                            model=BAICHUAN_CHAT_MODEL,
+                            callback_manager=CallbackManager([handler]))
+    elif AI_TYPE == 'OPENAI':
+        llm = ChatOpenAI(
+            streaming=True,
+            openai_api_base=OPENAI_API_BASE,
+            openai_api_key=OPENAI_API_KEY,
+            model_name=OPENAI_CHAT_MODEL,
+            callback_manager=CallbackManager([handler]),
+        )
+    else:
+        llm = ChatTongyi(
+            streaming=True,
+            dashscope_api_key=DASHSCOPE_API_KEY,
+            model=DASHSCOPE_CHAT_MODEL,
+            callback_manager=CallbackManager([handler]),
+        )
     # chat_prompt = ChatPromptTemplate.from_template(template=chat_template)
     examples = []
     for example in peidi_examples:
@@ -252,14 +262,14 @@ def async_run(qa, wordType, keyWord):
 @app.route('/streamchat/', methods=['POST'])
 def chat():
     try:
-        # input_text = '猫粮、耐存储、健康'
         wordType = request.json.get('wordType')
         keyWord = request.json.get('keyWord')
+        AI_TYPE = request.json.get('ai_type')
         # list_chat_history = request.json.get('chat_history', [])
         tuple_chat_history = []
         # for history in list_chat_history:
         #     tuple_chat_history.append(tuple(history))
-        return Response(chat_bot(wordType, keyWord), mimetype="text/event-stream")
+        return Response(chat_bot(wordType, keyWord, AI_TYPE), mimetype="text/event-stream")
     except Exception:
         msg = {'success': False, 'result': None, 'errmsg': traceback.format_exc()}
         logexcption(msg['errmsg'])

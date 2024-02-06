@@ -19,13 +19,14 @@ from langchain.prompts import NGramOverlapExampleSelector
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores.zilliz import Zilliz
 from langchain_community.chat_models import ChatBaichuan
+from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain_core.callbacks import StreamingStdOutCallbackHandler, CallbackManager
 from langchain_core.outputs import LLMResult
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, FewShotPromptTemplate
 from werkzeug.utils import secure_filename
 
 from config import OPENAI_API_BASE, OPENAI_API_KEY, OPENAI_CHAT_MODEL, peidi_examples, peidi_example_formatter_template, \
-    peidi_result_formatter_template, BAICHUAN_API_KEY, BAICHUAN_CHAT_MODEL
+    peidi_result_formatter_template, BAICHUAN_API_KEY, BAICHUAN_CHAT_MODEL, DASHSCOPE_API_KEY, DASHSCOPE_CHAT_MODEL
 
 # os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
@@ -204,11 +205,17 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 def chat_bot(wordType, keyWord):
     handler = ChainStreamHandler()
-    llm = ChatBaichuan(temperature=0,
-                        streaming=True,
-                        baichuan_api_key=BAICHUAN_API_KEY,
-                        model=BAICHUAN_CHAT_MODEL,
-                        callback_manager=CallbackManager([handler]))
+    # llm = ChatBaichuan(temperature=0,
+    #                     streaming=True,
+    #                     baichuan_api_key=BAICHUAN_API_KEY,
+    #                     model=BAICHUAN_CHAT_MODEL,
+    #                     callback_manager=CallbackManager([handler]))
+    llm = ChatTongyi(
+        streaming=True,
+        dashscope_api_key=DASHSCOPE_API_KEY,
+        model=DASHSCOPE_CHAT_MODEL,
+        callback_manager=CallbackManager([handler]),
+    )
     # chat_prompt = ChatPromptTemplate.from_template(template=chat_template)
     examples = []
     for example in peidi_examples:

@@ -30,7 +30,7 @@ st.image('http://peidibrand.com/assets/images/logo.png')
 with st.sidebar:
     st.radio(
         "模型",
-        ["gpt-3.5-turbo-1106", "gpt-4-1106-preview"],
+        ["gpt-4-turbo-preview", "gpt-3.5-turbo"],
         key="openai_model"
     )
 
@@ -91,6 +91,7 @@ if prompt := st.chat_input("What is up?"):
             ],
             stream=True,
         ):
+            print(response)
             full_response += (response.choices[0].delta.content or "")
             message_placeholder.markdown(full_response + "▌")
         message_placeholder.markdown(full_response)

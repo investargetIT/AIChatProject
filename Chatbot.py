@@ -91,7 +91,6 @@ if prompt := st.chat_input("What is up?"):
             ],
             stream=True,
         ):
-            print(response)
             full_response += (response.choices[0].delta.content or "")
             message_placeholder.markdown(full_response + "▌")
         message_placeholder.markdown(full_response)

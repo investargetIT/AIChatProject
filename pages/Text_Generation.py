@@ -3,7 +3,7 @@ import requests
 
 options = {
     "TONGYI": "通义千问",
-    "BAICHUAN": "百川大模型",
+    # "BAICHUAN": "百川大模型",
     "OPENAI": "GPT",
 }
 st.image('http://peidibrand.com/assets/images/logo.png')
@@ -19,7 +19,11 @@ st.radio(
 )
 st.radio(
     "模型",
-    ["TONGYI", "BAICHUAN", "OPENAI"],
+    [
+        "TONGYI",
+        # "BAICHUAN",
+        "OPENAI"
+    ],
     format_func=lambda a: options[a],
     key="llm"
 )

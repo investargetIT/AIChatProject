@@ -128,7 +128,8 @@ def chatgptWithZillizCloud():
         embeddings = HuggingFaceBgeEmbeddings(model_name=embedding_model,
                                               model_kwargs={'device': 'cpu'},
                                               encode_kwargs={'normalize_embeddings': True})
-        llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
+        # llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
+        llm = ChatTongyi(temperature=0, dashscope_api_key=ai_key, model=chat_model)
         # vector_db = Milvus(embeddings, zilliz_collection_name, {"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
         vector_db = Zilliz(embedding_function=embeddings, collection_name=zilliz_collection_name,
                            connection_args={"uri": ZILLIZ_ENDPOINT, "token": ZILLIZ_token})
@@ -165,7 +166,8 @@ def chatgptWithPDFFile():
         prompt_template = """基于以下已知内容，简洁和专业的来回答用户的问题。如果无法从中得到答案，请说"根据已知内容无法回答该问题" 
                     答案请使用中文。已知内容:{context} 问题:{question}"""
         prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-        llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
+        # llm = ChatBaichuan(temperature=0, baichuan_api_key=ai_key, model=chat_model)
+        llm = ChatTongyi(temperature=0, dashscope_api_key=ai_key, model=chat_model)
         chain = load_qa_chain(llm, chain_type="stuff", prompt=prompt)
 
         result = chain.run(input_documents=docs, question=question)
@@ -205,13 +207,7 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 def chat_bot(wordType, keyWord, AI_TYPE):
     handler = ChainStreamHandler()
-    if AI_TYPE == 'BAICHUAN':
-        llm = ChatBaichuan(temperature=0,
-                            streaming=True,
-                            baichuan_api_key=BAICHUAN_API_KEY,
-                            model=BAICHUAN_CHAT_MODEL,
-                            callback_manager=CallbackManager([handler]))
-    elif AI_TYPE == 'OPENAI':
+    if AI_TYPE == 'OPENAI':
         llm = ChatOpenAI(
             streaming=True,
             openai_api_base=OPENAI_API_BASE,
